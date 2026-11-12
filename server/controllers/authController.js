@@ -1,13 +1,13 @@
+
 const pool = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-// User Registration
+// USER REGISTRATION
 const registerUser = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
-        // Validate required fields
         if (!name || !email || !password) {
             return res.status(400).json({
                 success: false,
@@ -15,7 +15,6 @@ const registerUser = async (req, res) => {
             });
         }
 
-        // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
         if (!emailRegex.test(email)) {
@@ -25,7 +24,6 @@ const registerUser = async (req, res) => {
             });
         }
 
-        // Validate password
         if (password.length < 8) {
             return res.status(400).json({
                 success: false,
@@ -35,7 +33,6 @@ const registerUser = async (req, res) => {
 
         const normalizedEmail = email.trim().toLowerCase();
 
-        // Check whether email already exists
         const existingUser = await pool.query(
             "SELECT id FROM users WHERE email = $1",
             [normalizedEmail]
@@ -48,10 +45,8 @@ const registerUser = async (req, res) => {
             });
         }
 
-        // Hash password using bcrypt
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Insert user into database
         const result = await pool.query(
             `INSERT INTO users (name, email, password)
              VALUES ($1, $2, $3)
@@ -61,7 +56,6 @@ const registerUser = async (req, res) => {
 
         const user = result.rows[0];
 
-        // Generate JWT
         const token = jwt.sign(
             { userId: user.id },
             process.env.JWT_SECRET,
@@ -85,12 +79,12 @@ const registerUser = async (req, res) => {
     }
 };
 
-// User Login
+
+// USER LOGIN
 const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Validate required fields
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
@@ -100,7 +94,6 @@ const loginUser = async (req, res) => {
 
         const normalizedEmail = email.trim().toLowerCase();
 
-        // Find user by email
         const result = await pool.query(
             "SELECT id, name, email, password FROM users WHERE email = $1",
             [normalizedEmail]
@@ -115,7 +108,6 @@ const loginUser = async (req, res) => {
 
         const user = result.rows[0];
 
-        // Compare password with stored bcrypt hash
         const isPasswordValid = await bcrypt.compare(
             password,
             user.password
@@ -128,7 +120,6 @@ const loginUser = async (req, res) => {
             });
         }
 
-        // Generate JWT
         const token = jwt.sign(
             { userId: user.id },
             process.env.JWT_SECRET,
@@ -156,8 +147,201 @@ const loginUser = async (req, res) => {
     }
 };
 
-// Export both functions
+
+// GET LOGGED-IN USER PROFILE
+const getProfile = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, name, email, created_at
+             FROM users
+             WHERE id = $1`,
+            [req.user.userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "User profile not found."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            user: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error("Get profile error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to retrieve your profile."
+        });
+    }
+};
+
+
+// UPDATE USER PROFILE
+const updateProfile = async (req, res) => {
+    try {
+        const { name, email } = req.body;
+
+        if (!name || !email) {
+            return res.status(400).json({
+                success: false,
+                message: "Name and email are required."
+            });
+        }
+
+        const normalizedName = name.trim();
+        const normalizedEmail = email.trim().toLowerCase();
+
+        if (!normalizedName || normalizedName.length > 100) {
+            return res.status(400).json({
+                success: false,
+                message: "Name must contain between 1 and 100 characters."
+            });
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!emailRegex.test(normalizedEmail)) {
+            return res.status(400).json({
+                success: false,
+                message: "Please enter a valid email address."
+            });
+        }
+
+        const result = await pool.query(
+            `UPDATE users
+             SET name = $1, email = $2
+             WHERE id = $3
+             RETURNING id, name, email, created_at`,
+            [normalizedName, normalizedEmail, req.user.userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "User profile not found."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Profile updated successfully.",
+            user: result.rows[0]
+        });
+
+    } catch (error) {
+        if (error.code === "23505") {
+            return res.status(409).json({
+                success: false,
+                message: "This email address is already registered."
+            });
+        }
+
+        console.error("Update profile error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to update your profile."
+        });
+    }
+};
+
+
+// CHANGE PASSWORD
+const changePassword = async (req, res) => {
+    try {
+        const {
+            currentPassword,
+            newPassword,
+            confirmPassword
+        } = req.body;
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "All password fields are required."
+            });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must contain at least 8 characters."
+            });
+        }
+
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "New password and confirmation do not match."
+            });
+        }
+
+        if (currentPassword === newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must be different from current password."
+            });
+        }
+
+        const result = await pool.query(
+            "SELECT password FROM users WHERE id = $1",
+            [req.user.userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "User account not found."
+            });
+        }
+
+        const isCurrentPasswordValid = await bcrypt.compare(
+            currentPassword,
+            result.rows[0].password
+        );
+
+        if (!isCurrentPasswordValid) {
+            return res.status(401).json({
+                success: false,
+                message: "Current password is incorrect."
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await pool.query(
+            `UPDATE users
+             SET password = $1
+             WHERE id = $2`,
+            [hashedPassword, req.user.userId]
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Password changed successfully."
+        });
+
+    } catch (error) {
+        console.error("Change password error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to change your password."
+        });
+    }
+};
+
+
+// EXPORT FUNCTIONS
 module.exports = {
     registerUser,
-    loginUser
+    loginUser,
+    getProfile,
+    updateProfile,
+    changePassword
 };
