@@ -1,4 +1,3 @@
-
 import {
   BrowserRouter,
   Navigate,
@@ -12,6 +11,7 @@ import Login from "./pages/Login";
 import ReadingHistory from "./pages/ReadingHistory";
 import Register from "./pages/Register";
 import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
 
 function App() {
     return (
@@ -51,6 +51,11 @@ function App() {
                 <Route
                     path="/reports"
                     element={<Reports />}
+                />
+
+                <Route
+                    path="/settings"
+                    element={<Settings />}
                 />
 
                 <Route

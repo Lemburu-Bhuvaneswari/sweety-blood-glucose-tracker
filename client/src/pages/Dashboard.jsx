@@ -242,6 +242,7 @@ function Dashboard() {
                     </button>
 
                     <button
+                        type="button"
                         className="nav-item"
                         onClick={() => navigate("/reports")}
                     >
@@ -249,16 +250,17 @@ function Dashboard() {
                         <span>Reports</span>
                     </button>
 
-                </nav>
-
-                <div className="sidebar-bottom">
-
-                    <button className="nav-item">
+                    <button
+                        type="button"
+                        className="nav-item"
+                        onClick={() => navigate("/settings")}
+                    >
                         <Settings size={19} />
                         <span>Settings</span>
                     </button>
 
                     <button
+                        type="button"
                         className="nav-item logout-item"
                         onClick={handleLogout}
                     >
@@ -266,7 +268,7 @@ function Dashboard() {
                         <span>Logout</span>
                     </button>
 
-                </div>
+                </nav>
 
             </aside>
 

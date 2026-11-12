@@ -6,10 +6,18 @@
     color: #29263d;
 }
 
-/* Sidebar */
+/* Fixed sidebar: independent of the report page height */
 .reports-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 100;
     width: 250px;
     min-width: 250px;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
     background: #ffffff;
     padding: 30px 20px;
     display: flex;
@@ -26,6 +34,7 @@
     font-weight: 800;
     margin-bottom: 55px;
     padding-left: 8px;
+    flex-shrink: 0;
 }
 
 .brand-icon {
@@ -37,6 +46,7 @@
     justify-content: center;
     color: white;
     background: linear-gradient(135deg, #7047eb, #a78bfa);
+    flex-shrink: 0;
 }
 
 .sidebar-label {
@@ -46,13 +56,20 @@
     letter-spacing: 1.5px;
     padding-left: 12px;
     margin-bottom: 15px;
+    flex-shrink: 0;
 }
 
-.sidebar-nav,
-.sidebar-bottom {
+/* Sidebar navigation */
+.sidebar-nav {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    flex-shrink: 0;
+}
+
+/* Keep Settings and Logout in the main navigation */
+.sidebar-bottom {
+    display: none;
 }
 
 .nav-item {
@@ -70,6 +87,7 @@
     text-align: left;
     cursor: pointer;
     transition: 0.25s ease;
+    white-space: nowrap;
 }
 
 .nav-item:hover,
@@ -82,19 +100,18 @@
     font-weight: 600;
 }
 
-.sidebar-bottom {
-    margin-top: auto;
-}
 
 .logout-item:hover {
     background: #fff0f0;
     color: #e05252;
 }
 
-/* Main */
+/* Main content is offset from the fixed sidebar */
 .reports-main {
     flex: 1;
     min-width: 0;
+    min-height: 100vh;
+    margin-left: 250px;
     padding: 35px 42px;
 }
 
@@ -477,6 +494,10 @@
         width: 75px;
         min-width: 75px;
         padding: 25px 12px;
+    }
+
+    .reports-main {
+        margin-left: 75px;
     }
 
     .sidebar-brand {
