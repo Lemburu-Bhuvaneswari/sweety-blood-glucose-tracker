@@ -1,4 +1,5 @@
 import axios from "axios";
+
 import {
     Bell,
     ClipboardList,
@@ -10,9 +11,9 @@ import {
     LogOut,
     Save,
     ShieldCheck,
-    Target,
     UserRound
 } from "lucide-react";
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -26,6 +27,7 @@ function Settings() {
     const [activeTab, setActiveTab] = useState("profile");
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
 
@@ -42,46 +44,55 @@ function Settings() {
 
     const [showPasswords, setShowPasswords] = useState(false);
 
-    const [dailyGoal, setDailyGoal] = useState(
-        localStorage.getItem("dailyReadingGoal") || "4"
-    );
-
     const token = localStorage.getItem("token");
 
+    // Load user profile
     useEffect(() => {
         if (!token) {
-            navigate("/login");
+            navigate("/login", { replace: true });
             return;
         }
 
-        fetchProfile();
-    }, []);
-
-    const fetchProfile = async () => {
-        try {
-            const response = await axios.get(
-                `${API_URL}/auth/profile`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
+        const loadProfile = async () => {
+            try {
+                const response = await axios.get(
+                    `${API_URL}/auth/profile`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
                     }
+                );
+
+                setProfile({
+                    name: response.data.user.name,
+                    email: response.data.user.email
+                });
+
+            } catch (err) {
+                if (err.response?.status === 401) {
+                    localStorage.removeItem("token");
+                    localStorage.removeItem("user");
+
+                    navigate("/login", { replace: true });
+                    return;
                 }
-            );
 
-            setProfile({
-                name: response.data.user.name,
-                email: response.data.user.email
-            });
-        } catch (err) {
-            setError(
-                err.response?.data?.message ||
-                "Unable to load profile details."
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
+                setError(
+                    err.response?.data?.message ||
+                    "Unable to load profile details."
+                );
 
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadProfile();
+
+    }, [token, navigate]);
+
+    // Handle profile input changes
     const handleProfileChange = (e) => {
         setProfile({
             ...profile,
@@ -89,6 +100,7 @@ function Settings() {
         });
     };
 
+    // Update profile
     const handleProfileSubmit = async (e) => {
         e.preventDefault();
 
@@ -112,6 +124,7 @@ function Settings() {
                 email: response.data.user.email
             });
 
+            // Update locally stored user information
             const storedUser = localStorage.getItem("user");
 
             if (storedUser) {
@@ -128,16 +141,27 @@ function Settings() {
             }
 
             setMessage("Profile updated successfully!");
+
         } catch (err) {
+            if (err.response?.status === 401) {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+
+                navigate("/login", { replace: true });
+                return;
+            }
+
             setError(
                 err.response?.data?.message ||
                 "Unable to update profile."
             );
+
         } finally {
             setSaving(false);
         }
     };
 
+    // Handle password input changes
     const handlePasswordChange = (e) => {
         setPasswords({
             ...passwords,
@@ -145,6 +169,7 @@ function Settings() {
         });
     };
 
+    // Change password
     const handlePasswordSubmit = async (e) => {
         e.preventDefault();
 
@@ -152,12 +177,16 @@ function Settings() {
         setError("");
 
         if (passwords.newPassword !== passwords.confirmPassword) {
-            setError("New password and confirm password do not match.");
+            setError(
+                "New password and confirm password do not match."
+            );
             return;
         }
 
         if (passwords.newPassword.length < 8) {
-            setError("New password must contain at least 8 characters.");
+            setError(
+                "New password must contain at least 8 characters."
+            );
             return;
         }
 
@@ -175,7 +204,8 @@ function Settings() {
             );
 
             setMessage(
-                response.data.message || "Password changed successfully!"
+                response.data.message ||
+                "Password changed successfully!"
             );
 
             setPasswords({
@@ -183,36 +213,42 @@ function Settings() {
                 newPassword: "",
                 confirmPassword: ""
             });
+
         } catch (err) {
+            if (err.response?.status === 401) {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+
+                navigate("/login", { replace: true });
+                return;
+            }
+
             setError(
                 err.response?.data?.message ||
                 "Unable to change password."
             );
+
         } finally {
             setSaving(false);
         }
     };
 
-    const handleGoalSave = () => {
-        localStorage.setItem("dailyReadingGoal", dailyGoal);
-
-        setMessage("Daily reading goal saved on this device!");
-        setError("");
-    };
-
+    // Logout
     const handleLogout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
 
-        navigate("/login");
+        navigate("/login", { replace: true });
     };
 
+    // Change settings tab
     const changeTab = (tab) => {
         setActiveTab(tab);
         setMessage("");
         setError("");
     };
 
+    // Loading screen
     if (loading) {
         return (
             <div className="settings-loading">
@@ -224,14 +260,20 @@ function Settings() {
     return (
         <div className="settings-layout">
 
+            {/* SIDEBAR */}
             <aside className="settings-sidebar">
 
                 <div className="settings-brand">
-                    <div className="settings-brand-icon">S</div>
+
+                    <div className="settings-brand-icon">
+                        S
+                    </div>
+
                     <div>
                         <h2>Sweety</h2>
                         <span>Glucose Tracker</span>
                     </div>
+
                 </div>
 
                 <div className="settings-nav-label">
@@ -266,6 +308,7 @@ function Settings() {
                     <UserRound size={19} />
                     Settings
                 </button>
+
                 <button
                     className="settings-logout"
                     onClick={handleLogout}
@@ -281,42 +324,63 @@ function Settings() {
 
             </aside>
 
+            {/* MAIN CONTENT */}
             <main className="settings-main">
 
+                {/* HEADER */}
                 <header className="settings-header">
+
                     <div>
+
                         <span className="settings-breadcrumb">
                             Account / Settings
                         </span>
+
                         <h1>Settings</h1>
-                        <p>Manage your account and preferences.</p>
+
+                        <p>
+                            Manage your account and security.
+                        </p>
+
                     </div>
 
                     <div className="settings-avatar">
                         {profile.name?.charAt(0).toUpperCase()}
                     </div>
+
                 </header>
 
+                {/* WELCOME SECTION */}
                 <section className="settings-welcome">
+
                     <div>
+
                         <h2>Account Settings</h2>
+
                         <p>
                             Hello, {profile.name}! Keep your account
                             information up to date.
                         </p>
+
                     </div>
 
                     <div className="settings-welcome-icon">
                         <UserRound size={35} />
                     </div>
+
                 </section>
 
                 <div className="settings-content">
 
+                    {/* SETTINGS TABS */}
                     <aside className="settings-tabs">
 
                         <button
-                            className={activeTab === "profile" ? "selected" : ""}
+                            className={
+                                activeTab === "profile"
+                                    ? "selected"
+                                    : ""
+                            }
                             onClick={() => changeTab("profile")}
                         >
                             <UserRound size={19} />
@@ -324,7 +388,11 @@ function Settings() {
                         </button>
 
                         <button
-                            className={activeTab === "security" ? "selected" : ""}
+                            className={
+                                activeTab === "security"
+                                    ? "selected"
+                                    : ""
+                            }
                             onClick={() => changeTab("security")}
                         >
                             <LockKeyhole size={19} />
@@ -332,15 +400,11 @@ function Settings() {
                         </button>
 
                         <button
-                            className={activeTab === "preferences" ? "selected" : ""}
-                            onClick={() => changeTab("preferences")}
-                        >
-                            <Target size={19} />
-                            Glucose Preferences
-                        </button>
-
-                        <button
-                            className={activeTab === "notifications" ? "selected" : ""}
+                            className={
+                                activeTab === "notifications"
+                                    ? "selected"
+                                    : ""
+                            }
                             onClick={() => changeTab("notifications")}
                         >
                             <Bell size={19} />
@@ -349,6 +413,7 @@ function Settings() {
 
                     </aside>
 
+                    {/* SETTINGS PANEL */}
                     <section className="settings-panel">
 
                         {message && (
@@ -363,13 +428,18 @@ function Settings() {
                             </div>
                         )}
 
+                        {/* PROFILE SECTION */}
                         {activeTab === "profile" && (
                             <>
+
                                 <div className="settings-section-heading">
+
                                     <h2>My Profile</h2>
+
                                     <p>
                                         Update your personal account information.
                                     </p>
+
                                 </div>
 
                                 <form onSubmit={handleProfileSubmit}>
@@ -379,7 +449,9 @@ function Settings() {
                                     </div>
 
                                     <div className="settings-field">
+
                                         <label>Full Name</label>
+
                                         <input
                                             type="text"
                                             name="name"
@@ -389,10 +461,13 @@ function Settings() {
                                             required
                                             maxLength={100}
                                         />
+
                                     </div>
 
                                     <div className="settings-field">
+
                                         <label>Email Address</label>
+
                                         <input
                                             type="email"
                                             name="email"
@@ -401,6 +476,7 @@ function Settings() {
                                             placeholder="Enter your email"
                                             required
                                         />
+
                                     </div>
 
                                     <button
@@ -409,21 +485,30 @@ function Settings() {
                                         disabled={saving}
                                     >
                                         <Save size={17} />
-                                        {saving ? "Saving..." : "Save Changes"}
+
+                                        {saving
+                                            ? "Saving..."
+                                            : "Save Changes"}
                                     </button>
 
                                 </form>
+
                             </>
                         )}
 
+                        {/* SECURITY SECTION */}
                         {activeTab === "security" && (
                             <>
+
                                 <div className="settings-section-heading">
+
                                     <h2>Account Security</h2>
+
                                     <p>
                                         Change your password to keep your
                                         account secure.
                                     </p>
+
                                 </div>
 
                                 <form onSubmit={handlePasswordSubmit}>
@@ -445,13 +530,18 @@ function Settings() {
                                             placeholder: "Confirm new password"
                                         }
                                     ].map((field) => (
+
                                         <div
                                             className="settings-field"
                                             key={field.name}
                                         >
-                                            <label>{field.label}</label>
+
+                                            <label>
+                                                {field.label}
+                                            </label>
 
                                             <div className="settings-password-input">
+
                                                 <input
                                                     type={
                                                         showPasswords
@@ -468,22 +558,31 @@ function Settings() {
                                                 <button
                                                     type="button"
                                                     onClick={() =>
-                                                        setShowPasswords(!showPasswords)
+                                                        setShowPasswords(
+                                                            !showPasswords
+                                                        )
                                                     }
-                                                    aria-label="Toggle password visibility"
+                                                    aria-label={
+                                                        showPasswords
+                                                            ? "Hide passwords"
+                                                            : "Show passwords"
+                                                    }
                                                 >
                                                     {showPasswords
                                                         ? <EyeOff size={18} />
                                                         : <Eye size={18} />
                                                     }
                                                 </button>
+
                                             </div>
+
                                         </div>
+
                                     ))}
 
                                     <p className="settings-password-hint">
-                                        Your new password must contain at
-                                        least 8 characters.
+                                        Your new password must contain
+                                        at least 8 characters.
                                     </p>
 
                                     <button
@@ -492,85 +591,41 @@ function Settings() {
                                         disabled={saving}
                                     >
                                         <LockKeyhole size={17} />
-                                        {saving ? "Updating..." : "Update Password"}
+
+                                        {saving
+                                            ? "Updating..."
+                                            : "Update Password"}
                                     </button>
 
                                 </form>
+
                             </>
                         )}
 
-                        {activeTab === "preferences" && (
-                            <>
-                                <div className="settings-section-heading">
-                                    <h2>Glucose Preferences</h2>
-                                    <p>
-                                        Personalize your daily glucose tracking.
-                                    </p>
-                                </div>
-
-                                <div className="settings-field">
-                                    <label>Glucose Measurement Unit</label>
-
-                                    <input
-                                        type="text"
-                                        value="mg/dl"
-                                        disabled
-                                    />
-
-                                    <small>
-                                        Sweety currently records glucose
-                                        values in mg/dl.
-                                    </small>
-                                </div>
-
-                                <div className="settings-field">
-                                    <label>Daily Reading Goal</label>
-
-                                    <select
-                                        value={dailyGoal}
-                                        onChange={(e) =>
-                                            setDailyGoal(e.target.value)
-                                        }
-                                    >
-                                        <option value="1">1 reading per day</option>
-                                        <option value="2">2 readings per day</option>
-                                        <option value="3">3 readings per day</option>
-                                        <option value="4">4 readings per day</option>
-                                    </select>
-
-                                    <small>
-                                        Choose your preferred daily tracking
-                                        goal. This preference is currently
-                                        saved on this device.
-                                    </small>
-                                </div>
-
-                                <button
-                                    className="settings-save-button"
-                                    onClick={handleGoalSave}
-                                >
-                                    <Save size={17} />
-                                    Save Preferences
-                                </button>
-                            </>
-                        )}
-
+                        {/* NOTIFICATIONS SECTION */}
                         {activeTab === "notifications" && (
                             <>
+
                                 <div className="settings-section-heading">
+
                                     <h2>Notifications</h2>
+
                                     <p>
                                         Stay informed about your glucose
                                         tracking routine.
                                     </p>
+
                                 </div>
 
                                 <div className="settings-coming-soon">
+
                                     <div className="settings-coming-icon">
                                         <Bell size={30} />
                                     </div>
 
-                                    <h3>Reminders coming soon!</h3>
+                                    <h3>
+                                        Reminders coming soon!
+                                    </h3>
 
                                     <p>
                                         Daily reading reminders and
@@ -579,7 +634,9 @@ function Settings() {
                                     </p>
 
                                     <span>Coming Soon</span>
+
                                 </div>
+
                             </>
                         )}
 
@@ -587,11 +644,13 @@ function Settings() {
 
                 </div>
 
+                {/* FOOTER */}
                 <footer className="settings-footer">
                     Sweety Glucose Tracker · Manage your health journey
                 </footer>
 
             </main>
+
         </div>
     );
 }
